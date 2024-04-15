@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <link rel="manifest" href="manifest.json" />
+    <title>Hubby</title>
+    <style>
+        body {
+            background-color: black;
+        }
+
+        h1 {
+            color: white;
+        }
+
+        p {
+            color: white;
+        }
+
+        .cur-connected {
+            color: white;
+            padding-top: 50px;
+            padding-bottom: 50px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+        }
+
+        .cur-connected span {
+            font-size: 50px;
+            font-weight: bold;
+        }
+
+        .header {
+            padding-top: 15px;
+            padding-bottom: 10px;
+        }
+
+        * {
+            -webkit-user-select: none;
+        }
+
+        @-webkit-keyframes animated {
+            from {
+                background-position: -300px 0;
+            }
+
+            to {
+                background-position: 300px 0;
+            }
+        }
+
+        .animated {
+            -webkit-animation: animated 2s linear infinite;
+            -webkit-background-clip: text;
+            background-color: #999;
+            background-image: -webkit-linear-gradient(left, rgba(255, 255, 255, 0), white, rgba(255, 255, 255, 0));
+            background-repeat: no-repeat;
+            color: transparent;
+            font-family: Arial, Helvetica, Sans-serif;
+            font-size: 17px;
+            line-height: 57px;
+            position: relative;
+            text-transform: lowercase;
+            top: 1px;
+        }
+
+        .thumb {
+            background-image: -webkit-linear-gradient(#fff, #d9d9d9 45%, #ccc 45%, #bbb);
+            border-radius: 5px;
+            cursor: pointer;
+            left: 2px;
+            height: 64px;
+            position: absolute;
+            top: 2px;
+            width: 64px;
+            padding-top: 10px;
+        }
+
+        .containerz {
+            background-image: -webkit-linear-gradient(black, #222 60%, #242424 60%, #444);
+            border: 1px solid #777;
+            border-radius: 5px;
+            margin: 20px;
+            padding: 5px;
+            padding-left: 90px;
+            position: relative;
+        }
+
+        .slidengo {
+            padding-bottom: 150px;
+        }
+
+        .light-button {
+            font-size:24px;
+            display:block;
+            margin: 0 auto;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            width: 200px;
+            padding: 10px;
+            border: 1px solid white;
+            border-radius: 10px;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center header">
+                <h1>Hubby</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="cur-connected">
+                    <span class="connected">Waiting...</span>
+                </div>
+            </div>
+            <a href="/light-on" class="light-button">Light On</a>
+            <a href="/light-off" class="light-button">Light Off</a>
+        </div>
+        <div class="fixed-bottom row">
+            <div class="col-12 text-center slidengo">
+                <div class="containerz">
+                    <div class="animated">Slide to switch</div>
+                    <div class="thumb">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor"
+                            class="bi bi-arrow-right" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script>
+        var done = false;
+        $('.thumb').each(function () {
+            var thumb = $(this);
+            var move = function (e) {
+                var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+                console.log("move");
+                var x = touch.pageX - thumb.parent().offset().left - thumb.width() / 2;
+                var minX = 2;
+                var maxX = screen.width - thumb.width() - 40;
+                var threshold = 56;
+                x = x < minX ? minX : x > maxX ? maxX : x;
+                thumb.css('left', x);
+                thumb.prev('.animated').css('opacity', Math.max(0, 1 - x / threshold));
+                if (x >= maxX && !done) {
+                    done = true;
+                    // if the text in .connected is "PC", make a request to /mac. If the text in .connected is "MAC", make a request to /pc. Update the text in span with class "connected" to reflect the status.
+                    var status = $(".connected").text();
+                    if (status == "PC") {
+                        console.log("PC req made");
+                        $.ajax({
+                            url: "/mac",
+                            success: function (result) {
+                                updateStatus();
+                            },
+                            error: function (result) {
+                                alert("Request failed.");
+                            }
+                        });
+                    } else if (status == "Mac") {
+                        console.log("Mac req made");
+                        $.ajax({
+                            url: "/pc",
+                            success: function (result) {
+                                updateStatus();
+                            },
+                            error: function (result) {
+                                alert("Request failed.");
+                            }
+                        });
+                    }
+                }
+            };
+
+            var up = function () {
+                done = false;
+                $(document).off({
+                    touchmove: move,
+                    touchend: up
+                });
+
+                var animation = {
+                    duration: 100,
+                    easing: 'linear'
+                };
+
+                thumb.animate({
+                    left: 2
+                }, animation);
+
+                thumb.prev('.animated').animate({
+                    opacity: 1
+                }, animation);
+            };
+
+            thumb.on({
+                touchstart: function () {
+                    console.log("thumb on");
+                    $(document).on({
+                        touchmove: move,
+                        touchend: up
+                    });
+                }
+            });
+        });
+
+        // On page load, make a request to /current. It will return either {"status": "PC" } or {"status": "MAC" }. Update the text in span with class "connected" to reflect the status.
+        $(document).ready(function () {
+            updateStatus();
+        });
+
+        var updateStatus = function () {
+            $.ajax({
+                url: "/current",
+                success: function (result) {
+                    $(".connected").text(result);
+                },
+                error: function (result) {
+                    alert("Request failed.");
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

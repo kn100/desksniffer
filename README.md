@@ -10,3 +10,5 @@ to serial what is being displayed on the LCD. If you got here looking for how to
 sniff i2c for your own hardware, you might want to look at
 https://github.com/kn100/I2C-sniffer as that project is far more general. No
 guarantees it works though :)
+
+CHAOS.
