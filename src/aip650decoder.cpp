@@ -68,7 +68,7 @@ int AIP650Decoder::getSegment(byte inputByte)
     }
 }
 
-// For a given data byte, this function returns whether or not the period 
+// For a given data byte, this function returns whether or not the period
 // appears after the digit.
 bool AIP650Decoder::hasPeriod(byte inputByte)
 {

@@ -2,12 +2,14 @@
 #define BUTTONEVTBUFFER_H
 #include <Arduino.h>
 
-struct ButtonStateChangeEvent {
+struct ButtonStateChangeEvent
+{
     bool state;
-    unsigned long time; 
+    unsigned long time;
 };
 
-class ButtonEvtBuffer {
+class ButtonEvtBuffer
+{
 private:
     ButtonStateChangeEvent buffer[4];
     int head;

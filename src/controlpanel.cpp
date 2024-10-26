@@ -2,108 +2,81 @@
 #include "button.h"
 
 ControlPanel::ControlPanel()
-    : up("up", PIN_BUTTON_UP), middle("middle", PIN_BUTTON_MIDDLE), down("down", PIN_BUTTON_DOWN) {
+    : up("up", PIN_BUTTON_UP), middle("middle", PIN_BUTTON_MIDDLE), down("down", PIN_BUTTON_DOWN), objToggle(DESK), action({DESK, HALT, 0, 0})
+{
 }
 
-void ControlPanel::recv() {
+void ControlPanel::recv()
+{
     up.recv();
     middle.recv();
     down.recv();
 }
 
-int ControlPanel::GetMostRecentStateChangeTS() const {
-    if (up.getLastStateChangeTime() > middle.getLastStateChangeTime() && up.getLastStateChangeTime() > down.getLastStateChangeTime()) {
-        return up.getLastStateChangeTime();
-    } else if (middle.getLastStateChangeTime() > up.getLastStateChangeTime() && middle.getLastStateChangeTime() > down.getLastStateChangeTime()) {
-        return middle.getLastStateChangeTime();
-    } else {
-        return down.getLastStateChangeTime();
-    }
-}
-
-Button ControlPanel::GetMostRecentStateChangeAction() const {
-    if (up.getLastStateChangeTime() > middle.getLastStateChangeTime() && up.getLastStateChangeTime() > down.getLastStateChangeTime()) {
+Button ControlPanel::GetMostRecentStateChangeAction() const
+{
+    if (up.getLastStateChangeTS() > middle.getLastStateChangeTS() && up.getLastStateChangeTS() > down.getLastStateChangeTS())
         return up;
-    } else if (middle.getLastStateChangeTime() > up.getLastStateChangeTime() && middle.getLastStateChangeTime() > down.getLastStateChangeTime()) {
+    if (middle.getLastStateChangeTS() > up.getLastStateChangeTS() && middle.getLastStateChangeTS() > down.getLastStateChangeTS())
         return middle;
-    } else {
-        return down;
-    }
+    return down;
 }
 
-Button ControlPanel::guard(Button button) const {
-    if (up.getState() == HELD && down.getState() == HELD) {
-        return Button("", 0);
-    }
-
-    return button;
-}
-
-Action ControlPanel::getAction() {
-    objToggle = DESK;
+Action ControlPanel::getAction()
+{
     Button mostRecentStateChangeAction = GetMostRecentStateChangeAction();
 
-    if (mostRecentStateChangeAction.getLastStateChangeTime() == action.time) {
+    if (mostRecentStateChangeAction.getLastStateChangeTS() == action.time)
         return action;
-    }
-
-    Serial.printf("Most recent state change time: %d, action time: %d\n", mostRecentStateChangeAction.getLastStateChangeTime(), action.time);
 
     String btnPressed = mostRecentStateChangeAction.getName();
 
-    if (btnPressed == "up") {
-        if (up.getState() == HELD) {
-            updateAction({objToggle, UP, 0, up.getLastStateChangeTime()});
-        } else if (up.getState() == DOUBLE_PRESS) {
-            updateAction({objToggle, UPBY, 100, up.getLastStateChangeTime()});
-        } else {
-            updateAction({objToggle, NONE, 0, up.getLastStateChangeTime()});
-        }
-        return action;
-    } 
-
-    if(btnPressed == "middle") {
-        if (middle.getState() == SINGLE_PRESS) {
-            toggleObj();
-            updateAction({objToggle, TOGGLE, 0, middle.getLastStateChangeTime()});
-        } else {
-            updateAction({objToggle, NONE, 0, middle.getLastStateChangeTime()});
-        }
-        return action;
+    if (btnPressed == "up")
+    {
+        if (up.getState() == HELD)
+            return updateAction({objToggle, UP, 0, up.getLastStateChangeTS()});
+        if (up.getState() == DOUBLE_PRESS)
+            return updateAction({objToggle, UPBY, 320, up.getLastStateChangeTS()});
+        return updateAction({objToggle, HALT, 0, up.getLastStateChangeTS()});
     }
-
-    if (btnPressed == "down") {
-        if (down.getState() == HELD) {
-            updateAction({objToggle, DOWN, 0, down.getLastStateChangeTime()});
-        } else if (down.getState() == DOUBLE_PRESS) {
-            updateAction({objToggle, DOWNBY, 100, down.getLastStateChangeTime()});
-        } else {
-            updateAction({objToggle, NONE, 0, down.getLastStateChangeTime()});
+    else if (btnPressed == "middle")
+    {
+        if (middle.getState() == SINGLE_PRESS)
+        {
+            toggleObj();
+            return updateAction({objToggle, TOGGLE, 0, middle.getLastStateChangeTS()});
         }
-        return action;
+        return updateAction({objToggle, HALT, 0, middle.getLastStateChangeTS()});
+    }
+    else if (btnPressed == "down")
+    {
+        if (down.getState() == HELD)
+            return updateAction({objToggle, DOWN, 0, down.getLastStateChangeTS()});
+        if (down.getState() == DOUBLE_PRESS)
+            return updateAction({objToggle, DOWNBY, 320, down.getLastStateChangeTS()});
+        return updateAction({objToggle, HALT, 0, down.getLastStateChangeTS()});
     }
     return action;
 }
 
-void ControlPanel::updateAction(Action newAction) {
+Action ControlPanel::updateAction(Action newAction)
+{
     Serial.printf("Updating action to %d\n", newAction.command);
     action = newAction;
+    return action;
 }
 
 void ControlPanel::toggleObj()
 {
     if (objToggle == DESK)
     {
-        Serial.println("Toggling to lights");
         objToggle = LIGHTS;
+        return;
     }
-    else
-    {
-        objToggle = DESK;
-        Serial.println("Toggling to desk");
-    }
+    objToggle = DESK;
 }
 
-String ControlPanel::string() const {
+String ControlPanel::string() const
+{
     return up.string() + " / " + middle.string() + " / " + down.string();
 }

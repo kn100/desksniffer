@@ -9,8 +9,7 @@
 DeskMover::DeskMover()
     : requestedHeight(0),
       moveTickCycle(0),
-      prevHeight(0),
-      requestedMove(false)
+      prevHeight(0)
 {
     pinMode(PIN_UP, OUTPUT);
     pinMode(PIN_DOWN, OUTPUT);
@@ -19,21 +18,23 @@ DeskMover::DeskMover()
 }
 
 unsigned long lastTickFlip = 0;
-unsigned long onTime = 50;
-unsigned long offTime = 100;
+unsigned long onTime = 100;
+unsigned long offTime = 500;
 
 bool DeskMover::handleManualMovement(bool manualUp, bool manualDown)
 {
-    if (manualUp) {
+    if (manualUp)
+    {
         requestedHeight = 0;
         return moveDeskUp();
     }
-    
-    if (manualDown) {
+
+    if (manualDown)
+    {
         requestedHeight = 0;
         return moveDeskDown();
     }
-    
+
     return haltMovement();
 }
 
@@ -71,33 +72,35 @@ bool DeskMover::haltMovement()
 {
     digitalWrite(PIN_UP, LOW);
     digitalWrite(PIN_DOWN, LOW);
-    requestedMove = false;
     return false;
 }
 
 void DeskMover::moveDesk(bool nearingTarget, int pin)
 {
-    if (nearingTarget) {
-        if (millis() - lastTickFlip > onTime) {
+    if (nearingTarget)
+    {
+        if (millis() - lastTickFlip > onTime)
+        {
             moveTickCycle = !moveTickCycle;
             lastTickFlip = millis();
         }
-        if (moveTickCycle) {
+        if (moveTickCycle)
             digitalWrite(pin, LOW);
-        } else {
+        else
             digitalWrite(pin, HIGH);
-        }
-    } else {
-        digitalWrite(pin, HIGH);
+        return;
     }
+    digitalWrite(pin, HIGH);
 }
 
-bool DeskMover::moveDeskUp() {
+bool DeskMover::moveDeskUp()
+{
     digitalWrite(PIN_UP, HIGH);
     return true;
 }
 
-bool DeskMover::moveDeskDown() {
+bool DeskMover::moveDeskDown()
+{
     digitalWrite(PIN_DOWN, HIGH);
     return true;
 }

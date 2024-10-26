@@ -8,46 +8,48 @@
 #include "button.h"
 #include <Arduino.h>
 
-enum Object {
+enum Object
+{
     DESK,
     LIGHTS
 };
 
-enum Command {
+enum Command
+{
     UP,
     UPBY,
     DOWN,
     DOWNBY,
     TOGGLE,
-    NONE, // actually more like halt
+    HALT, 
 };
 
-struct Action {
+struct Action
+{
     Object object;
     Command command;
     int value;
     unsigned long time;
 };
 
-class ControlPanel {
+class ControlPanel
+{
 public:
     ControlPanel();
     void recv();
     Action getAction();
     String string() const;
 
-    
 private:
     Button up;
     Button middle;
     Button down;
     Object objToggle;
-    Action action = {DESK, NONE, 0, 0};
+    Action action = {DESK, HALT, 0, 0};
     Button guard(Button button) const;
-    int GetMostRecentStateChangeTS() const;
     Button GetMostRecentStateChangeAction() const;
     void toggleObj();
-    void updateAction(Action action);
+    Action updateAction(Action action);
 };
 
 #endif

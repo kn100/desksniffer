@@ -1,17 +1,22 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include <Arduino.h>  // Required for using unsigned long
+#include <Arduino.h>
 #include "buttonevtbuffer.h"
-enum ButtonState {
+enum ButtonState
+{
     IDLE,
     SINGLE_PRESS,
     DOUBLE_PRESS,
     HELD,
 };
 
-class Button {
+class Button
+{
 private:
+    const unsigned long debounceDelay = 1;
+    const unsigned long holdThreshold = 300;
+    const unsigned long releaseThreshold = 100;
     String name;
     int pin;
     bool unstableState;
@@ -19,17 +24,14 @@ private:
     unsigned long lastDebounceTime;
     unsigned long lastStateChangeTime;
     ButtonState state;
-    const unsigned long debounceDelay = 1; // 10ms debounce time
-    const unsigned long HOLD_THRESHOLD = 300;
-    const unsigned long RELEASE_THRESHOLD = 100;  
-    const unsigned long SINGLE_PRESS_THRESHOLD = 50;
-    const unsigned long DOUBLE_PRESS_THRESHOLD = 300;
+    void setState(ButtonState newState, unsigned long time);
 
     void debounceButton();
     void detectAction();
     void recordPresses();
     bool isSinglePress(int i, int j) const;
     bool isValidDoublePress() const;
+    void setIsPressed(bool pressed);
     ButtonEvtBuffer evtBuffer;
 
 public:
@@ -37,15 +39,9 @@ public:
     void recv();
     String getName() const;
     ButtonState getState() const;
-    void setState(ButtonState newState, unsigned long time);
-
     String string() const;
-
-    unsigned long getLastPressTime() const;
-    unsigned long getLastReleaseTime() const;
-    unsigned long getLastStateChangeTime() const;
+    unsigned long getLastStateChangeTS() const;
     bool getIsPressed() const;
-    void setIsPressed(bool pressed);
 };
 
 #endif

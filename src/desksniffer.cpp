@@ -20,11 +20,11 @@
 #include "mqttcontrol.h"
 
 // Your WiFi credentials
-const char *SSID = "-";
-const char *PWD = "-";
+const char *SSID = "SomeSSID";
+const char *PWD = "SomePassword";
 
 // For gating the slow operations
-unsigned long lastExecutionTime = 0; 
+unsigned long lastExecutionTime = 0;
 const unsigned long interval = 40; // How frequently in ms we want to run the "slow" operations
 
 AsyncWebServer server(80);
@@ -35,7 +35,6 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Connecting to desk...");
-	delay(3000);
 
 	DeskHeight::initialize();
 
@@ -57,7 +56,7 @@ void setup()
 void loop()
 {
 	performFastOperations();
-	
+
 	if (millis() - lastExecutionTime < interval)
 		return;
 	lastExecutionTime = millis();
@@ -72,7 +71,7 @@ void performFastOperations()
 void performSlowOperations()
 {
 	DeskHeight::recv();
-	//Serial.println(controlPanel.string());
+	// Serial.println(controlPanel.string());
 	if (DeskHeight::getLastKnownHeight() == 0)
 	{
 		lastHeightRequestTime = 0;
@@ -81,44 +80,43 @@ void performSlowOperations()
 	// If the buttons have not changed, and there has been no web request for 30 seconds, we will not do anything.
 	bool validRequestInTimeframe = lastHeightRequestTime != 0 && (millis() - lastHeightRequestTime) < 30000;
 	Action newAction = controlPanel.getAction();
-	if (lastHeightRequestTime != newAction.time) {
-		if (newAction.object == DESK) {
-			switch (newAction.command) {
-				case UP:
-					satisfied = true;
-					deskMover.handleManualMovement(true, false);
-					break;
-				case DOWN:
-					satisfied = true;
-					deskMover.handleManualMovement(false, true);
-					break;
-				case NONE:
-					satisfied = true;
-					deskMover.haltMovement();
-					break;
-				//These still not working because we are entering these cases every time rather than just once.
-				case UPBY:
-					satisfied = false;
-					requestedHeight = DeskHeight::getLastKnownHeight() + newAction.value;
-					Serial.printf("Requested height: %d, request time: %d\n", requestedHeight, newAction.time);
-					lastHeightRequestTime = newAction.time;
-					break;
-				case DOWNBY:
-					satisfied = false;
-					requestedHeight = DeskHeight::getLastKnownHeight() - newAction.value;
-					lastHeightRequestTime = newAction.time;
-					break;
-				case TOGGLE:
-					break;
+	if (lastHeightRequestTime != newAction.time)
+	{
+		if (newAction.object == DESK)
+		{
+			switch (newAction.command)
+			{
+			case UP:
+				satisfied = true;
+				deskMover.handleManualMovement(true, false);
+				break;
+			case DOWN:
+				satisfied = true;
+				deskMover.handleManualMovement(false, true);
+				break;
+			case HALT:
+				satisfied = true;
+				deskMover.haltMovement();
+				break;
+			// These still not working because we are entering these cases every time rather than just once.
+			case UPBY:
+				satisfied = false;
+				requestedHeight = DeskHeight::getLastKnownHeight() + newAction.value;
+				Serial.printf("Requested height: %d, request time: %d\n", requestedHeight, newAction.time);
+				lastHeightRequestTime = newAction.time;
+				break;
+			case DOWNBY:
+				satisfied = false;
+				requestedHeight = DeskHeight::getLastKnownHeight() - newAction.value;
+				lastHeightRequestTime = newAction.time;
+				break;
+			case TOGGLE:
+				break;
 			}
 		}
 	}
-	if (!satisfied) {
+	if (!satisfied)
 		satisfied = deskMover.requestHeight(DeskHeight::getLastKnownHeight(), requestedHeight);
-		if (satisfied) {
-			Serial.printf("Satisfied with height: %d\n", requestedHeight);
-		}
-	}
 
 	if (WiFi.status() != WL_CONNECTED)
 		ESP.restart();

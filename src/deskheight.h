@@ -34,10 +34,11 @@ class DeskHeight
     static void IRAM_ATTR i2cTriggerOnRaisingSCL();
     static void IRAM_ATTR i2cTriggerOnChangeSDA();
     static void processDataBuffer();
-    public: 
-        static void initialize();
-        static void stop();
-        static void recv();
-        static uint16_t getLastKnownHeight();
+
+public:
+    static void initialize();
+    static void stop();
+    static void recv();
+    static uint16_t getLastKnownHeight();
 };
 #endif

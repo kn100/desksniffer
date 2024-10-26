@@ -84,7 +84,7 @@ uint16_t DeskHeight::getLastKnownHeight()
         }
         if (abs(heightToSet - lastKnownHeight) > 20 && lastKnownHeight != 0)
         {
-            
+
             Serial.println("NOISE, too far from last known height");
             return lastKnownHeight;
         }
@@ -126,7 +126,6 @@ void DeskHeight::processDataBuffer()
                 uint8_t seg = AIP650Decoder::getSegment(addressByte);
                 if (seg != -1)
                     segs[seg] = {AIP650Decoder::getDigit(dataByte), AIP650Decoder::hasPeriod(dataByte)};
-    
             }
             bytesReadThisSession = 0;
         }
