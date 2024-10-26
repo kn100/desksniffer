@@ -9,7 +9,7 @@
 // ■  1  ■      connected to a Aip650EO LCD Display Driver from Wuxi I-core Elec.
 //  ■■■■■       This list is not exhaustive, and just covers the characters my
 // ■     ■      particular desk seems to like to display when I confuse it.
-// ■3   5■   0  
+// ■3   5■   0
 // ■  7  ■  ■■■
 //  ■■■■■   ■■■
 class AIP650Decoder

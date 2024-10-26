@@ -5,22 +5,19 @@
 class DeskMover
 {
 public:
-    DeskMover(int upPin, int downPin);
-    void initialize();
-    bool handle(bool manualUp, bool manualDown, uint16_t currHeight);
-    void requestHeight(uint16_t height);
+    DeskMover();
+    bool handleManualMovement(bool manualUp, bool manualDown);
+    bool requestHeight(uint16_t currHeight, uint16_t reqHeight);
     void wakeDesk();
-    void haltMovement();
+    bool haltMovement();
+
 private:
     uint16_t requestedHeight;
     bool moveTickCycle;
     uint16_t prevHeight;
-    int valueSameForNumberOfCycles;
-    bool requestedMove;
-    int upPin;
-    int downPin;
     void moveDesk(bool slow, int pin);
+    bool moveDeskUp();
+    bool moveDeskDown();
     bool deskIsMoving(uint16_t currHeight);
-
 };
 #endif
