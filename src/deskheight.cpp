@@ -3,8 +3,10 @@
 #include "deskheight.h"
 #include "aip650decoder.h"
 
-int DeskHeight::sdaPin;
-int DeskHeight::sclPin;
+// The i2c pins on the AiP650EO
+#define PIN_SDA 12
+#define PIN_SCL 13
+
 volatile byte DeskHeight::i2cStatus;
 volatile byte DeskHeight::dataBuffer[4096];
 volatile uint16_t DeskHeight::bufferPoiW;
@@ -12,29 +14,26 @@ volatile uint16_t DeskHeight::bufferPoiR;
 uint16_t DeskHeight::lastKnownHeight;
 struct DeskHeight::segment DeskHeight::segs[3];
 
-void DeskHeight::initialize(int sdaPin, int sclPin)
+void DeskHeight::initialize()
 {
-    DeskHeight::sdaPin = sdaPin;
-    DeskHeight::sclPin = sclPin;
     i2cStatus = I2C_IDLE;
     bufferPoiW = 0;
     bufferPoiR = 0;
     lastKnownHeight = 0;
     for (int i = 0; i < 3; i++)
-    {
         segs[i] = {' ', false};
-    }
-    pinMode(sdaPin, INPUT_PULLUP);
-    pinMode(sclPin, INPUT_PULLUP);
-    attachInterrupt(sclPin, i2cTriggerOnRaisingSCL, RISING);
-    attachInterrupt(sdaPin, i2cTriggerOnChangeSDA, CHANGE);
+
+    pinMode(PIN_SDA, INPUT_PULLUP);
+    pinMode(PIN_SCL, INPUT_PULLUP);
+    attachInterrupt(PIN_SCL, i2cTriggerOnRaisingSCL, RISING);
+    attachInterrupt(PIN_SDA, i2cTriggerOnChangeSDA, CHANGE);
     Serial.println("DeskHeight:: Interrupts attached");
 }
 
 void DeskHeight::stop()
 {
-    detachInterrupt(sclPin);
-    detachInterrupt(sdaPin);
+    detachInterrupt(PIN_SCL);
+    detachInterrupt(PIN_SDA);
     Serial.println("DeskHeight:: Interrupts detached");
 }
 
@@ -61,21 +60,17 @@ uint16_t DeskHeight::getLastKnownHeight()
     for (int i = 0; i < 3; i++)
     {
         if (segs[i].segVal == ' ' || segs[i].segVal == 'H' || segs[i].segVal == 'E' || segs[i].segVal == 'R')
-        {
             break;
-        }
-        if (segs[i].periodAfter)
-        {
-            hasPeriod = true;
-        }
-        uint8_t digit = segs[i].segVal - '0';
 
+        if (segs[i].periodAfter)
+            hasPeriod = true;
+
+        uint8_t digit = segs[i].segVal - '0';
         heightToSet += digit * pow(10, 2 - i);
     }
     if (!hasPeriod && heightToSet != 0)
-    {
         heightToSet *= 10;
-    }
+
     if (heightToSet != 0 && heightToSet != lastKnownHeight)
     {
         // If the heightToSet is not between 720 and 1200, then it is invalid.
@@ -87,8 +82,9 @@ uint16_t DeskHeight::getLastKnownHeight()
             Serial.println("NOISE, wildly wrong value");
             return lastKnownHeight;
         }
-        if (abs(heightToSet - lastKnownHeight) > 10 && lastKnownHeight != 0)
+        if (abs(heightToSet - lastKnownHeight) > 20 && lastKnownHeight != 0)
         {
+            
             Serial.println("NOISE, too far from last known height");
             return lastKnownHeight;
         }
@@ -121,21 +117,16 @@ void DeskHeight::processDataBuffer()
             {
                 addressByte = 0;
                 for (int j = 0; j < 7; j++)
-                {
                     addressByte |= dataBuffer[i - 19 + j] << (6 - j);
-                }
 
                 dataByte = 0;
                 for (int j = 0; j < 8; j++)
-                {
                     dataByte |= dataBuffer[i - 19 + 9 + j] << (7 - j);
-                }
 
                 uint8_t seg = AIP650Decoder::getSegment(addressByte);
                 if (seg != -1)
-                {
                     segs[seg] = {AIP650Decoder::getDigit(dataByte), AIP650Decoder::hasPeriod(dataByte)};
-                }
+    
             }
             bytesReadThisSession = 0;
         }
@@ -154,16 +145,16 @@ void DeskHeight::processDataBuffer()
 void IRAM_ATTR DeskHeight::i2cTriggerOnRaisingSCL()
 {
     if (i2cStatus == I2C_TRX)
-        dataBuffer[bufferPoiW++] = digitalRead(sdaPin);
+        dataBuffer[bufferPoiW++] = digitalRead(PIN_SDA);
 };
 
 // This interrupt handles recording start and stop conditions.
 void IRAM_ATTR DeskHeight::i2cTriggerOnChangeSDA()
 {
-    if (!digitalRead(sclPin))
+    if (!digitalRead(PIN_SCL))
         return;
 
-    bool sda = digitalRead(sdaPin);
+    bool sda = digitalRead(PIN_SDA);
 
     if (i2cStatus == I2C_IDLE && !sda) // Clock was high, SDA changed low
     {

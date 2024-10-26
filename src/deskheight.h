@@ -18,8 +18,6 @@
  * loop. You can then request the last known height at any time. */
 class DeskHeight
 {
-    static int sdaPin;
-    static int sclPin;
     static volatile byte i2cStatus;
     static volatile byte dataBuffer[4096];
     static volatile uint16_t bufferPoiW;
@@ -37,7 +35,7 @@ class DeskHeight
     static void IRAM_ATTR i2cTriggerOnChangeSDA();
     static void processDataBuffer();
     public: 
-        static void initialize(int sdaPin, int sclPin);
+        static void initialize();
         static void stop();
         static void recv();
         static uint16_t getLastKnownHeight();

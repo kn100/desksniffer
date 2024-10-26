@@ -16,31 +16,113 @@
 #include "desksniffer.h"
 #include "deskheight.h"
 #include "deskmover.h"
-#include "manualcontrols.h"
+#include "controlpanel.h"
+#include "mqttcontrol.h"
 
-const char *SSID = "SomeSSID";
-const char *PWD = "SomePassword";
+// Your WiFi credentials
+const char *SSID = "-";
+const char *PWD = "-";
+
+// For gating the slow operations
+unsigned long lastExecutionTime = 0; 
+const unsigned long interval = 40; // How frequently in ms we want to run the "slow" operations
+
 AsyncWebServer server(80);
+DeskMover deskMover;
+ControlPanel controlPanel;
 
-// The i2c pins on the AiP650EO
-#define PIN_SDA 12
-#define PIN_SCL 13
+void setup()
+{
+	Serial.begin(115200);
+	Serial.println("Connecting to desk...");
+	delay(3000);
 
-// The buttons on the desk controller
-#define PIN_UP 33
-#define PIN_DOWN 32
+	DeskHeight::initialize();
 
-// The buttons attached to the ESP32 for manual control
-#define PIN_BUTTON_UP 4
-#define PIN_BUTTON_DOWN 15
-#define PIN_BUTTON_MIDDLE 5
+	connectToWiFi();
 
-// State variables
-bool deskBooted = false;
-bool moveRequested = false;
+	// HTTP handler that either returns the current height or sets a new height
+	server.on("/desk", HTTP_GET, [](AsyncWebServerRequest *request)
+			  { 
+		if (request->hasParam("height")) {
+			request->send(200, "text/plain", requestHeight(request->getParam("height")->value().toInt()));
+		} else {
+			request->send(200, "text/plain", currentHeight()); } });
 
-DeskMover deskMover(PIN_UP, PIN_DOWN);
-ManualControls manualControls(PIN_BUTTON_UP, PIN_BUTTON_DOWN);
+	server.onNotFound(notFound);
+	server.begin();
+	Serial.println("Successfully initialized. Letsa goooo!");
+}
+
+void loop()
+{
+	performFastOperations();
+	
+	if (millis() - lastExecutionTime < interval)
+		return;
+	lastExecutionTime = millis();
+	performSlowOperations();
+}
+
+void performFastOperations()
+{
+	controlPanel.recv();
+}
+
+void performSlowOperations()
+{
+	DeskHeight::recv();
+	//Serial.println(controlPanel.string());
+	if (DeskHeight::getLastKnownHeight() == 0)
+	{
+		lastHeightRequestTime = 0;
+	}
+
+	// If the buttons have not changed, and there has been no web request for 30 seconds, we will not do anything.
+	bool validRequestInTimeframe = lastHeightRequestTime != 0 && (millis() - lastHeightRequestTime) < 30000;
+	Action newAction = controlPanel.getAction();
+	if (lastHeightRequestTime != newAction.time) {
+		if (newAction.object == DESK) {
+			switch (newAction.command) {
+				case UP:
+					satisfied = true;
+					deskMover.handleManualMovement(true, false);
+					break;
+				case DOWN:
+					satisfied = true;
+					deskMover.handleManualMovement(false, true);
+					break;
+				case NONE:
+					satisfied = true;
+					deskMover.haltMovement();
+					break;
+				//These still not working because we are entering these cases every time rather than just once.
+				case UPBY:
+					satisfied = false;
+					requestedHeight = DeskHeight::getLastKnownHeight() + newAction.value;
+					Serial.printf("Requested height: %d, request time: %d\n", requestedHeight, newAction.time);
+					lastHeightRequestTime = newAction.time;
+					break;
+				case DOWNBY:
+					satisfied = false;
+					requestedHeight = DeskHeight::getLastKnownHeight() - newAction.value;
+					lastHeightRequestTime = newAction.time;
+					break;
+				case TOGGLE:
+					break;
+			}
+		}
+	}
+	if (!satisfied) {
+		satisfied = deskMover.requestHeight(DeskHeight::getLastKnownHeight(), requestedHeight);
+		if (satisfied) {
+			Serial.printf("Satisfied with height: %d\n", requestedHeight);
+		}
+	}
+
+	if (WiFi.status() != WL_CONNECTED)
+		ESP.restart();
+}
 
 void connectToWiFi()
 {
@@ -71,8 +153,8 @@ String currentHeight()
 // HTTP handler that sets a requested height and returns OK
 String requestHeight(int height)
 {
-	moveRequested = true;
-	deskMover.requestHeight(height);
+	lastHeightRequestTime = millis();
+	deskMover.requestHeight(DeskHeight::getLastKnownHeight(), height);
 	return "OK";
 }
 
@@ -80,65 +162,4 @@ String requestHeight(int height)
 void notFound(AsyncWebServerRequest *request)
 {
 	request->send(404, "text/plain", "Not found");
-}
-
-void setup()
-{
-	Serial.begin(115200);
-	Serial.println("Connecting to desk...");
-	delay(3000);
-
-	DeskHeight::initialize(PIN_SDA, PIN_SCL);
-	deskMover.initialize();
-
-	// For unimplemented button just yet, just setting the pin as an input to prevent floating.
-	pinMode(PIN_BUTTON_MIDDLE, INPUT_PULLUP);
-
-	connectToWiFi();
-
-	// HTTP handler that either returns the current height or sets a new height
-	server.on("/desk", HTTP_GET, [](AsyncWebServerRequest *request)
-			  { 
-		if (request->hasParam("height")) {
-			request->send(200, "text/plain", requestHeight(request->getParam("height")->value().toInt()));
-		} else {
-			request->send(200, "text/plain", currentHeight()); } });
-
-	server.onNotFound(notFound);
-	server.begin();
-	Serial.println("Successfully initialized. Letsa goooo!");
-}
-
-void loop()
-{
-	// This delay truly sucks. It is here to essentially slow down the calls to deskMover.handle
-	// since apparently the desk doesn't like it when you rapidly press buttons extremely fast.
-	delay(50);
-	DeskHeight::recv();
-
-	int manualControlEngaged = manualControls.handleButtons();
-	if (manualControlEngaged != 0)
-		moveRequested = true;
-	
-	if (moveRequested) 
-		moveRequested = deskMover.handle(manualControlEngaged == 1, manualControlEngaged == 2, DeskHeight::getLastKnownHeight());
-	if (manualControlEngaged != 0)
-		return;
-
-	// Check if we have a valid height. If we do not, we will continue by pressing a random button
-	// until we get a valid height, at which point, we will stop pressing buttons.
-	if (DeskHeight::getLastKnownHeight() == 0)
-	{
-		deskBooted = false;
-		deskMover.wakeDesk();
-		return;
-	}
-	if (!deskBooted)
-	{
-		deskBooted = true;
-		deskMover.haltMovement();
-	}
-
-	if (WiFi.status() != WL_CONNECTED)
-		ESP.restart();
 }
